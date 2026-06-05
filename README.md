@@ -21,8 +21,8 @@ https://github.com/Adityaki37/easy-remote-keyboard/releases/latest
 Use:
 
 - `easy-remote-keyboard.exe` for Windows.
-- `easy-remote-keyboard-macos-arm64` for Apple Silicon Macs.
-- `easy-remote-keyboard-macos-x64` for Intel Macs.
+- `easy-remote-keyboard-macos-arm64.tar.gz` for Apple Silicon Macs.
+- `easy-remote-keyboard-macos-x64.tar.gz` for Intel Macs.
 
 The app asks whether this computer should be **Host**, **Guest**, or **Two-way** when it starts.
 
@@ -140,9 +140,9 @@ Legacy split-role debug builds are also available:
 These MVP executables are unsigned. Windows may warn on first run. macOS requires at least ad-hoc signing before launch:
 
 ```bash
-codesign --sign - ./easy-remote-keyboard-host-macos-arm64
-codesign --sign - ./easy-remote-keyboard-guest-macos-arm64
-codesign --sign - ./easy-remote-keyboard-macos-arm64
+tar -xzf easy-remote-keyboard-macos-arm64.tar.gz
+cd EasyRemoteKeyboard-macos-arm64
+./run.command
 ```
 
 Use the `x64` files for Intel Macs and the `arm64` files for Apple Silicon Macs.
