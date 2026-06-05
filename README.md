@@ -120,6 +120,18 @@ macOS requires privacy permissions for native input tools:
 
 After changing permissions, restart the app.
 
+If macOS says the app is damaged, it is usually Gatekeeper quarantine on the unsigned/not-notarized build. Move `Easy Remote Keyboard.app` to Applications, then run:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Easy Remote Keyboard.app"
+```
+
+If it still will not open, ad-hoc sign it locally and try again:
+
+```bash
+codesign --force --deep --sign - "/Applications/Easy Remote Keyboard.app"
+```
+
 ## Safety Defaults
 
 - Host approval is required for every friend session.
