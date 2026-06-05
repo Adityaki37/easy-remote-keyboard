@@ -22,6 +22,7 @@
           <div><span>Target</span><strong id="targetName">Not locked</strong></div>
           <div><span>Connection</span><strong id="connectionState">Idle</strong></div>
           <div><span>Ping</span><strong id="pingValue">--</strong></div>
+          <div><span>Mouse</span><strong id="mouseState">Off</strong></div>
         </div>
       </aside>
 
@@ -34,6 +35,10 @@
           <label>
             Name
             <input id="displayName" value="Player" spellcheck="false">
+          </label>
+          <label class="check-row">
+            <input id="enableMouse" type="checkbox">
+            <span>Share mouse</span>
           </label>
           <button id="lockTarget" type="button">Lock focused app</button>
         </section>

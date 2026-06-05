@@ -14,5 +14,6 @@ assert.equal(codeFromVk(0x57, 17, 0), "KeyW");
 assert.equal(codeFromVk(0x10, 0x36, 0), "ShiftRight");
 assert.equal(codeFromVk(0x11, 0x1d, 0x01), "ControlRight");
 assert.equal(MESSAGE_TYPES.HOST_INPUT, "host/input");
+assert.equal(MESSAGE_TYPES.GUEST_MOUSE, "guest/mouse");
 
 console.log("Smoke tests passed.");

@@ -13,10 +13,30 @@ const appServices = koffi.load(APPLICATION_SERVICES);
 const coreFoundation = koffi.load(CORE_FOUNDATION);
 
 const kCGHIDEventTap = 0;
+const kCGEventMouseMoved = 5;
+const kCGEventLeftMouseDown = 1;
+const kCGEventLeftMouseUp = 2;
+const kCGEventRightMouseDown = 3;
+const kCGEventRightMouseUp = 4;
+const kCGEventOtherMouseDown = 25;
+const kCGEventOtherMouseUp = 26;
+const kCGMouseButtonLeft = 0;
+const kCGMouseButtonRight = 1;
+const kCGMouseButtonCenter = 2;
+const kCGScrollEventUnitLine = 1;
 
 const CGEventCreateKeyboardEvent = appServices.func("uintptr CGEventCreateKeyboardEvent(uintptr source, uint16 virtualKey, bool keyDown)");
+const CGEventCreate = appServices.func("uintptr CGEventCreate(uintptr source)");
+const CGEventCreateMouseEvent = appServices.func("uintptr CGEventCreateMouseEvent(uintptr source, uint32 mouseType, double mouseCursorPosition_x, double mouseCursorPosition_y, uint32 mouseButton)");
+const CGEventCreateScrollWheelEvent = appServices.func("uintptr CGEventCreateScrollWheelEvent(uintptr source, uint32 units, uint32 wheelCount, int32 wheel1, int32 wheel2)");
+const CGEventGetLocation = appServices.func("void CGEventGetLocation(uintptr event, _Out_ CGPoint *point)");
 const CGEventPost = appServices.func("void CGEventPost(uint32 tap, uintptr event)");
 const CFRelease = coreFoundation.func("void CFRelease(uintptr cf)");
+
+const CGPoint = koffi.struct("CGPoint", {
+  x: "double",
+  y: "double"
+});
 
 const CODE_TO_MAC_KEY = Object.freeze({
   KeyA: 0x00,
@@ -170,10 +190,61 @@ function sendKey(code, down) {
   }
 }
 
+function sendMouse(event) {
+  if (!event || typeof event.kind !== "string") return;
+  if (event.kind === "move") {
+    const current = currentMousePoint();
+    const mouseEvent = CGEventCreateMouseEvent(0, kCGEventMouseMoved, current.x + (event.dx || 0), current.y + (event.dy || 0), kCGMouseButtonLeft);
+    postAndRelease(mouseEvent, "CGEventCreateMouseEvent move failed. Grant Accessibility permission.");
+    return;
+  }
+  if (event.kind === "button") {
+    const current = currentMousePoint();
+    const { type, button } = mouseButtonEvent(event.button, event.down);
+    const mouseEvent = CGEventCreateMouseEvent(0, type, current.x, current.y, button);
+    postAndRelease(mouseEvent, "CGEventCreateMouseEvent button failed. Grant Accessibility permission.");
+    return;
+  }
+  if (event.kind === "wheel") {
+    const vertical = event.axis === "horizontal" ? 0 : Math.trunc((event.delta || 0) / 120);
+    const horizontal = event.axis === "horizontal" ? Math.trunc((event.delta || 0) / 120) : 0;
+    const scrollEvent = CGEventCreateScrollWheelEvent(0, kCGScrollEventUnitLine, 2, vertical, horizontal);
+    postAndRelease(scrollEvent, "CGEventCreateScrollWheelEvent failed. Grant Accessibility permission.");
+  }
+}
+
+function currentMousePoint() {
+  const event = CGEventCreate(0);
+  if (!event) throw new Error("Could not read current mouse location.");
+  const point = {};
+  try {
+    CGEventGetLocation(event, point);
+    return point;
+  } finally {
+    CFRelease(event);
+  }
+}
+
+function mouseButtonEvent(button, down) {
+  if (button === "right") return { type: down ? kCGEventRightMouseDown : kCGEventRightMouseUp, button: kCGMouseButtonRight };
+  if (button === "middle") return { type: down ? kCGEventOtherMouseDown : kCGEventOtherMouseUp, button: kCGMouseButtonCenter };
+  return { type: down ? kCGEventLeftMouseDown : kCGEventLeftMouseUp, button: kCGMouseButtonLeft };
+}
+
+function postAndRelease(event, errorMessage) {
+  if (!event) throw new Error(errorMessage);
+  try {
+    CGEventPost(kCGHIDEventTap, event);
+  } finally {
+    CFRelease(event);
+  }
+}
+
 module.exports = {
   activeWindow,
   isForegroundWindow,
   hasKeyCode,
   sendKey,
+  sendMouse,
   CODE_TO_MAC_KEY
 };

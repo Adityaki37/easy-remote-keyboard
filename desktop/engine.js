@@ -11,6 +11,7 @@ const {
 } = require("../shared/protocol");
 const input = require("../host/platform");
 const { KeyboardHook } = require("../guest/keyboard-hook");
+const { MouseHook } = require("../guest/mouse-hook");
 
 function parseAllowlist(value) {
   if (!value) return new Set(DEFAULT_ALLOWED_CODES);
@@ -22,13 +23,17 @@ class DesktopEngine extends EventEmitter {
     super();
     this.ws = null;
     this.hook = null;
+    this.mouseHook = null;
     this.role = null;
     this.side = null;
     this.targetWindow = null;
     this.paused = false;
     this.approved = false;
     this.captureOn = false;
+    this.mouseEnabled = false;
+    this.receiveMouse = false;
     this.remoteHeldCodes = new Set();
+    this.remoteMouseButtons = new Set();
     this.remoteActiveCodes = new Set();
     this.allowedCodes = parseAllowlist(process.env.ALLOW_KEYS);
     this.lastRemoteInputAt = 0;
@@ -45,6 +50,8 @@ class DesktopEngine extends EventEmitter {
       approved: this.approved,
       paused: this.paused,
       captureOn: this.captureOn,
+      mouseEnabled: this.mouseEnabled,
+      receiveMouse: this.receiveMouse,
       remoteHeld: this.remoteHeldCodes.size
     };
   }
@@ -66,12 +73,14 @@ class DesktopEngine extends EventEmitter {
     return this.targetWindow;
   }
 
-  startHost({ relayUrl, name }) {
+  startHost({ relayUrl, name, mouseEnabled = false }) {
     this.stop({ silent: true });
     this.role = "host";
     this.side = "create";
     this.paused = false;
     this.approved = false;
+    this.mouseEnabled = false;
+    this.receiveMouse = Boolean(mouseEnabled);
     this.ws = new WebSocket(relayUrl);
 
     this.ws.on("open", () => {
@@ -116,6 +125,11 @@ class DesktopEngine extends EventEmitter {
       return;
     }
 
+    if (msg.type === MESSAGE_TYPES.GUEST_MOUSE) {
+      this.injectRemoteMouse(msg.event);
+      return;
+    }
+
     this.handleCommonMessage(msg);
   }
 
@@ -150,12 +164,14 @@ class DesktopEngine extends EventEmitter {
     this.emitStatus("Guest disconnected.");
   }
 
-  startGuest({ relayUrl, roomCode, name }) {
+  startGuest({ relayUrl, roomCode, name, mouseEnabled = false }) {
     this.stop({ silent: true });
     this.role = "guest";
     this.side = "join";
     this.approved = false;
     this.paused = false;
+    this.mouseEnabled = Boolean(mouseEnabled);
+    this.receiveMouse = false;
     this.hook = new KeyboardHook({
       allowedCodes: this.allowedCodes,
       suppressLocal: true,
@@ -163,6 +179,10 @@ class DesktopEngine extends EventEmitter {
       onToggle: () => this.toggleCapture()
     });
     this.hook.start();
+    this.setupMouseHook({
+      suppressLocal: true,
+      onMouse: (event) => sendJson(this.ws, { type: MESSAGE_TYPES.GUEST_MOUSE, event })
+    });
     this.ws = new WebSocket(relayUrl);
 
     this.ws.on("open", () => {
@@ -210,12 +230,14 @@ class DesktopEngine extends EventEmitter {
     this.handleCommonMessage(msg);
   }
 
-  startMirror({ relayUrl, name, side, roomCode }) {
+  startMirror({ relayUrl, name, side, roomCode, mouseEnabled = false }) {
     this.stop({ silent: true });
     this.role = "mirror";
     this.side = side;
     this.approved = false;
     this.paused = false;
+    this.mouseEnabled = Boolean(mouseEnabled);
+    this.receiveMouse = Boolean(mouseEnabled);
     this.hook = new KeyboardHook({
       allowedCodes: this.allowedCodes,
       suppressLocal: false,
@@ -223,6 +245,10 @@ class DesktopEngine extends EventEmitter {
       onToggle: () => this.toggleCapture()
     });
     this.hook.start();
+    this.setupMouseHook({
+      suppressLocal: false,
+      onMouse: (event) => this.sendMirrorMouse(event)
+    });
     this.ws = new WebSocket(relayUrl);
 
     this.ws.on("open", () => {
@@ -279,6 +305,12 @@ class DesktopEngine extends EventEmitter {
       return;
     }
 
+    const remoteMouseType = this.side === "create" ? MESSAGE_TYPES.GUEST_MOUSE : MESSAGE_TYPES.HOST_MOUSE;
+    if (msg.type === remoteMouseType) {
+      this.injectRemoteMouse(msg.event);
+      return;
+    }
+
     this.handleCommonMessage(msg);
   }
 
@@ -290,11 +322,27 @@ class DesktopEngine extends EventEmitter {
     });
   }
 
+  sendMirrorMouse(event) {
+    const type = this.side === "create" ? MESSAGE_TYPES.HOST_MOUSE : MESSAGE_TYPES.GUEST_MOUSE;
+    sendJson(this.ws, {
+      type,
+      event: { ...event, origin: this.side, mirrored: true }
+    });
+  }
+
+  setupMouseHook({ suppressLocal, onMouse }) {
+    if (!this.mouseEnabled) return;
+    this.mouseHook = new MouseHook({ suppressLocal, onMouse });
+    this.mouseHook.start();
+  }
+
   setCapture(active, reason) {
     const canCapture = Boolean(active && this.approved && !this.paused && this.ws?.readyState === WebSocket.OPEN);
     this.captureOn = canCapture;
     if (this.hook) this.hook.setArmed(canCapture);
-    this.emitStatus(`${this.role === "mirror" ? "Two-way" : "Keyboard"} capture ${canCapture ? "active" : "inactive"}.`, { reason });
+    if (this.mouseHook) this.mouseHook.setArmed(canCapture);
+    const label = this.mouseEnabled ? "Keyboard and mouse" : (this.role === "mirror" ? "Two-way" : "Keyboard");
+    this.emitStatus(`${label} capture ${canCapture ? "active" : "inactive"}.`, { reason });
   }
 
   toggleCapture() {
@@ -356,6 +404,51 @@ class DesktopEngine extends EventEmitter {
     }
   }
 
+  validateRemoteMouse(event) {
+    if (!this.receiveMouse) {
+      return "Remote mouse is disabled.";
+    }
+    if (!event || typeof event.kind !== "string") {
+      return "Malformed remote mouse event.";
+    }
+    if (!this.targetWindow || !input.isForegroundWindow(this.targetWindow.rawHwnd)) {
+      return "Target window is not foreground.";
+    }
+    if (this.role === "host" && this.paused) {
+      return "Host is paused.";
+    }
+    if (event.kind === "button" && !["left", "right", "middle"].includes(event.button)) {
+      return `Blocked unsupported mouse button ${event.button}.`;
+    }
+    if (event.kind === "move" && (Math.abs(event.dx || 0) > 4000 || Math.abs(event.dy || 0) > 4000)) {
+      return "Blocked suspicious mouse movement.";
+    }
+    return null;
+  }
+
+  injectRemoteMouse(event) {
+    const failure = this.validateRemoteMouse(event);
+    if (failure) {
+      if (event?.kind !== "move") this.emitStatus(failure, { level: "warn" });
+      this.releaseRemoteMouse("blocked or unsafe remote mouse");
+      return;
+    }
+
+    try {
+      input.sendMouse(event);
+      if (event.kind === "button") {
+        const key = event.button;
+        if (event.down) this.remoteMouseButtons.add(key);
+        else this.remoteMouseButtons.delete(key);
+      }
+      this.lastRemoteInputAt = Date.now();
+      this.emit("input", { code: mouseLabel(event), down: event.down ?? true });
+    } catch (err) {
+      this.emitStatus(err.message, { level: "error" });
+      this.releaseRemoteMouse("mouse injection error");
+    }
+  }
+
   releaseRemote(reason) {
     for (const code of [...this.remoteHeldCodes]) {
       if (input.hasKeyCode(code)) {
@@ -369,7 +462,20 @@ class DesktopEngine extends EventEmitter {
       this.remoteHeldCodes.delete(code);
     }
     this.remoteActiveCodes.clear();
+    this.releaseRemoteMouse(reason);
     if (reason) this.emitStatus(`Released remote keys (${reason}).`);
+  }
+
+  releaseRemoteMouse(reason) {
+    for (const button of [...this.remoteMouseButtons]) {
+      try {
+        input.sendMouse({ kind: "button", button, down: false });
+      } catch (err) {
+        this.emitStatus(`Failed to release mouse ${button}: ${err.message}`, { level: "error" });
+      }
+      this.remoteMouseButtons.delete(button);
+    }
+    if (reason && this.remoteMouseButtons.size) this.emitStatus(`Released remote mouse (${reason}).`);
   }
 
   handleCommonMessage(msg) {
@@ -409,6 +515,10 @@ class DesktopEngine extends EventEmitter {
       this.hook.stop();
       this.hook = null;
     }
+    if (this.mouseHook) {
+      this.mouseHook.stop();
+      this.mouseHook = null;
+    }
     if (this.ws) {
       this.ws.removeAllListeners();
       try {
@@ -421,6 +531,8 @@ class DesktopEngine extends EventEmitter {
     this.paused = false;
     this.approved = false;
     this.captureOn = false;
+    this.mouseEnabled = false;
+    this.receiveMouse = false;
     if (!silent) this.emitStatus("Stopped.");
   }
 
@@ -433,3 +545,10 @@ class DesktopEngine extends EventEmitter {
 module.exports = {
   DesktopEngine
 };
+
+function mouseLabel(event) {
+  if (!event) return "Mouse";
+  if (event.kind === "button") return `Mouse ${event.button}`;
+  if (event.kind === "wheel") return `Mouse wheel ${event.axis || "vertical"}`;
+  return "Mouse move";
+}

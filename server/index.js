@@ -130,7 +130,7 @@ function handleHost(ws, msg) {
     return;
   }
 
-  if (msg.type === MESSAGE_TYPES.HOST_INPUT) {
+  if (msg.type === MESSAGE_TYPES.HOST_INPUT || msg.type === MESSAGE_TYPES.HOST_MOUSE) {
     if (!room.approved) return;
     sendJson(room.guestWs, msg);
   }
@@ -169,7 +169,7 @@ function handleGuest(ws, msg) {
   const room = rooms.get(ws.roomCode);
   if (!room || room.guestWs !== ws) return;
 
-  if (msg.type === MESSAGE_TYPES.GUEST_INPUT) {
+  if (msg.type === MESSAGE_TYPES.GUEST_INPUT || msg.type === MESSAGE_TYPES.GUEST_MOUSE) {
     if (!room.approved) return;
     sendJson(room.hostWs, msg);
     return;

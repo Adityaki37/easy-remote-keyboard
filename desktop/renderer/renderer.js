@@ -14,7 +14,8 @@ function log(message) {
 function options() {
   return {
     relayUrl: $("relayUrl").value.trim(),
-    name: $("displayName").value.trim() || "Player"
+    name: $("displayName").value.trim() || "Player",
+    mouseEnabled: $("enableMouse").checked
   };
 }
 
@@ -38,6 +39,7 @@ function setMirrorSide(nextSide) {
 function updateState(state) {
   if (!state) return;
   $("connectionState").textContent = state.connected ? (state.approved ? "Approved" : "Connected") : "Idle";
+  $("mouseState").textContent = state.mouseEnabled || state.receiveMouse ? "On" : "Off";
   if (state.targetWindow) $("targetName").textContent = state.targetWindow.title;
 }
 

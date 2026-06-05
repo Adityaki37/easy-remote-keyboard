@@ -9,6 +9,7 @@ This project has three parts:
 - Host mode locks to one foreground target window/app and injects approved remote key events.
 - Guest mode sends keyboard down/up events from a native low-level keyboard hook.
 - Two-way mode lets both computers keep local keyboard input while also mirroring it to the other computer.
+- Optional mouse sharing can be enabled with the **Share mouse** checkbox.
 
 Video is intentionally out of scope; use Discord, Meet, OBS, or another stream for visuals.
 
@@ -25,6 +26,8 @@ Use:
 - `Easy Remote Keyboard-0.1.0-x64-mac.zip` for Intel Mac GUI.
 
 The app asks whether this computer should be **Host**, **Guest**, or **Two-way** when it starts.
+
+Mouse sharing is off by default. Turn on **Share mouse** before starting a session if you want to send or accept mouse movement, buttons, and wheel input.
 
 ## Run Locally
 
@@ -87,12 +90,14 @@ $env:RELAY_URL="wss://your-domain.example/ws"
 - `Ctrl+Alt+F12`: toggle capture.
 - Closing the guest window stops capture and releases held keys on the host.
 - While capture is active, allowed keys are suppressed locally on the guest PC.
+- If **Share mouse** is enabled, mouse input is captured too; leave it off for keyboard-only sessions.
 
 ## Two-Way Controls
 
 - `Ctrl+Alt+F12` or `c` then Enter: toggle sending your local keyboard to the other computer.
 - `q` then Enter: quit and release remote-held keys.
 - Two-way mode does not suppress local keys; your keyboard still controls your own focused app.
+- If **Share mouse** is enabled, local mouse input also stays local and is mirrored to the other computer.
 
 ## macOS Permissions
 
@@ -156,7 +161,7 @@ Use the `x64` files for Intel Macs and the `arm64` files for Apple Silicon Macs.
 ## Current Limitations
 
 - Windows x64 and macOS x64/arm64 only.
-- Keyboard only.
+- Keyboard support is always available; mouse sharing is optional and disabled by default.
 - Uses WebSocket relay for the first implementation. The input layer is intentionally separate so a WebRTC transport can replace it later.
 - `SendInput` cannot control secure desktop, UAC prompts, Ctrl+Alt+Del, or higher-integrity/elevated apps unless the host is also elevated.
 - macOS binaries were cross-built from Windows and still need to be signed/tested on a Mac.
