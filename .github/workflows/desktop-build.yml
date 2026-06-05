@@ -23,7 +23,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: easy-remote-keyboard-windows-gui
-          path: release/Easy Remote Keyboard 0.1.0.exe
+          path: release/*.exe
 
   macos:
     name: macOS GUI

@@ -21,9 +21,9 @@ https://github.com/Adityaki37/easy-remote-keyboard/releases/latest
 
 Use:
 
-- `Easy Remote Keyboard 0.1.0.exe` for Windows GUI.
-- `Easy Remote Keyboard-0.1.0-arm64-mac.zip` for Apple Silicon Mac GUI.
-- `Easy Remote Keyboard-0.1.0-x64-mac.zip` for Intel Mac GUI.
+- `EasyRemoteKeyboard-Windows-GUI.exe` for Windows.
+- `EasyRemoteKeyboard-macOS-AppleSilicon-GUI.zip` for Apple Silicon Macs.
+- `EasyRemoteKeyboard-macOS-Intel-GUI.zip` for Intel Macs.
 
 The app asks whether this computer should be **Host**, **Guest**, or **Two-way** when it starts.
 
@@ -103,8 +103,8 @@ $env:RELAY_URL="wss://your-domain.example/ws"
 
 macOS requires privacy permissions for native input tools:
 
-- Guest app: grant **Input Monitoring** so it can capture the keyboard.
-- Host app: grant **Accessibility** so it can post keyboard events and check the frontmost app.
+- Guest app: grant **Input Monitoring** so it can capture the keyboard and optional mouse input.
+- Host app: grant **Accessibility** so it can post keyboard/mouse events and check the frontmost app.
 
 After changing permissions, restart the app.
 
@@ -127,9 +127,7 @@ npm run host
 npm run build:desktop -- win
 ```
 
-The Windows GUI output is:
-
-- `release/Easy Remote Keyboard 0.1.0.exe`
+The Windows GUI output is a portable `.exe` in `release/`.
 
 macOS GUI builds must be produced on macOS:
 
@@ -164,5 +162,5 @@ Use the `x64` files for Intel Macs and the `arm64` files for Apple Silicon Macs.
 - Keyboard support is always available; mouse sharing is optional and disabled by default.
 - Uses WebSocket relay for the first implementation. The input layer is intentionally separate so a WebRTC transport can replace it later.
 - `SendInput` cannot control secure desktop, UAC prompts, Ctrl+Alt+Del, or higher-integrity/elevated apps unless the host is also elevated.
-- macOS binaries were cross-built from Windows and still need to be signed/tested on a Mac.
+- Release binaries are unsigned/not notarized. Windows SmartScreen and macOS Gatekeeper may warn on first launch.
 - Do not use with competitive games or anti-cheat-protected games unless the game explicitly allows remote input tools.
