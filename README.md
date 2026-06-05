@@ -41,6 +41,8 @@ The GUI can switch between transports so you can compare latency yourself:
 
 For direct modes, start the host first. The host shows local IP addresses in the activity log/room field. On the guest, choose the same transport and enter the host IP plus matching TCP/UDP ports.
 
+Do not leave **Direct host** as `127.0.0.1` on the guest computer unless both sides are running on the same machine. On your friend's computer, `127.0.0.1` means their own computer, not yours.
+
 ## Run Locally
 
 ```powershell

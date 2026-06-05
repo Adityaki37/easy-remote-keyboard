@@ -266,6 +266,15 @@ button.secondary {
   letter-spacing: 2px;
 }
 
+.room-detail {
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #101924;
+  color: #d9e3ee;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .segmented {
   display: inline-grid;
   grid-template-columns: 1fr 1fr;

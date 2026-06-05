@@ -48,6 +48,36 @@ function transportLabel(transportMode) {
   return "Relay";
 }
 
+function isLocalHost(value) {
+  const host = String(value || "").trim().toLowerCase();
+  return !host || host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function warnIfDirectJoin(opts) {
+  if (opts.transportMode === "relay") return;
+  if (isLocalHost(opts.directHost)) {
+    log("Direct host is localhost. On another computer, replace it with the host PC/Mac IP shown on the creator side.");
+  }
+}
+
+function showConnectionInfo(text) {
+  if (!text) return;
+  for (const id of ["hostConnectionInfo", "mirrorConnectionInfo"]) {
+    const el = $(id);
+    el.textContent = `Give this to the other computer: ${text}`;
+    el.hidden = false;
+  }
+  log(`Connection info: ${text}`);
+}
+
+function clearConnectionInfo() {
+  for (const id of ["hostConnectionInfo", "mirrorConnectionInfo"]) {
+    const el = $(id);
+    el.textContent = "";
+    el.hidden = true;
+  }
+}
+
 function setMode(nextMode) {
   mode = nextMode;
   document.querySelectorAll(".mode").forEach((button) => {
@@ -94,22 +124,28 @@ $("lockTarget").addEventListener("click", async () => {
 
 $("startHost").addEventListener("click", async () => {
   const opts = options();
+  clearConnectionInfo();
   await window.erk.startHost(opts);
 });
 
 $("joinGuest").addEventListener("click", async () => {
-  await window.erk.startGuest({
+  const opts = {
     ...options(),
     roomCode: $("guestRoomCode").value.trim().toUpperCase()
-  });
+  };
+  warnIfDirectJoin(opts);
+  await window.erk.startGuest(opts);
 });
 
 $("startMirror").addEventListener("click", async () => {
-  await window.erk.startMirror({
+  const opts = {
     ...options(),
     side: mirrorSide,
     roomCode: $("mirrorRoomCode").value.trim().toUpperCase()
-  });
+  };
+  if (mirrorSide === "create") clearConnectionInfo();
+  else warnIfDirectJoin(opts);
+  await window.erk.startMirror(opts);
 });
 
 $("approveButton").addEventListener("click", async () => {
@@ -136,6 +172,7 @@ window.erk.onStatus((payload) => {
     $("hostRoomCode").textContent = payload.roomCode;
     $("mirrorCreatedCode").textContent = payload.roomCode;
   }
+  if (payload.shareUrl) showConnectionInfo(payload.shareUrl);
 });
 
 window.erk.onJoinRequest((payload) => {

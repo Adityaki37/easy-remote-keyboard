@@ -309,7 +309,7 @@ class DirectUdpTransport extends DirectTcpTransport {
 
 function directSummary(port) {
   const ips = localIps();
-  return ips.length ? `${ips.join(", ")}:${port}` : `localhost:${port}`;
+  return ips.length ? ips.map((ip) => `${ip}:${port}`).join(", ") : `localhost:${port}`;
 }
 
 function localIps() {
