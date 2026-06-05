@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Easy Remote Keyboard</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <div class="title-row">
+          <div>
+            <h1>Remote Keyboard</h1>
+            <p>Send keyboard input to your friend's approved Windows app. Use a separate call/stream for visuals.</p>
+          </div>
+          <span id="statusBadge" class="badge">Idle</span>
+        </div>
+
+        <form id="joinForm" class="join-grid">
+          <label>
+            Room code
+            <input id="roomCode" autocomplete="off" spellcheck="false" maxlength="6" placeholder="ABC123" required>
+          </label>
+          <label>
+            Your name
+            <input id="guestName" autocomplete="name" maxlength="32" placeholder="Friend" required>
+          </label>
+          <button type="submit">Join</button>
+        </form>
+
+        <div class="controls">
+          <button id="captureButton" type="button" disabled>Capture Keyboard</button>
+          <button id="releaseButton" type="button" disabled>Release</button>
+        </div>
+
+        <div class="metrics">
+          <span>Connection: <strong id="connState">not connected</strong></span>
+          <span>Ping: <strong id="pingValue">--</strong></span>
+          <span>Keys held: <strong id="heldCount">0</strong></span>
+        </div>
+
+        <div id="captureSurface" class="capture-surface" tabindex="0">
+          <div>
+            <strong id="surfaceTitle">Keyboard capture inactive</strong>
+            <span id="surfaceHint">Join a room, wait for host approval, then click Capture Keyboard.</span>
+          </div>
+        </div>
+
+        <div class="log" id="log"></div>
+      </section>
+    </main>
+    <script src="/client.js"></script>
+  </body>
+</html>

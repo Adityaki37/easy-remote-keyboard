@@ -1,0 +1,67 @@
+{
+  "name": "easy-remote-keyboard",
+  "version": "0.1.0",
+  "description": "Low-bandwidth remote keyboard sharing for focused Windows and macOS apps.",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/index.js",
+    "host": "node host/main.js",
+    "guest": "node guest/main.js",
+    "mirror": "node mirror/main.js",
+    "app": "node app/main.js",
+    "dev": "node server/index.js",
+    "smoke": "node scripts/smoke.js",
+    "build:app": "node scripts/build-app.js",
+    "build:host": "node scripts/build-host.js",
+    "build:guest": "node scripts/build-guest.js",
+    "build:mac": "node scripts/build-mac.js",
+    "build": "npm run build:app",
+    "build:split": "npm run build:host && npm run build:guest",
+    "build:all": "npm run build && npm run build:mac"
+  },
+  "keywords": [
+    "remote-keyboard",
+    "windows",
+    "macos",
+    "sendinput",
+    "quartz",
+    "websocket"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.2.1",
+    "koffi": "^3.0.2",
+    "nanoid": "^5.1.6",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.7.0"
+  },
+  "bin": {
+    "easy-remote-keyboard": "app/main.js",
+    "easy-remote-keyboard-host": "host/main.js",
+    "easy-remote-keyboard-guest": "guest/main.js"
+  },
+  "pkg": {
+    "targets": [
+      "node24-win-x64"
+    ],
+    "outputPath": "dist",
+    "assets": [
+      "host/**/*.js",
+      "guest/**/*.js",
+      "app/**/*.js",
+      "mirror/**/*.js",
+      "shared/**/*.js",
+      "node_modules/koffi/**/*",
+      "node_modules/@koromix/koffi-*/**/*"
+    ]
+  },
+  "optionalDependencies": {
+    "@koromix/koffi-darwin-arm64": "^3.0.2",
+    "@koromix/koffi-darwin-x64": "^3.0.2",
+    "@koromix/koffi-win32-x64": "^3.0.2"
+  }
+}
