@@ -21,6 +21,7 @@
         <div class="summary">
           <div><span>Target</span><strong id="targetName">Not locked</strong></div>
           <div><span>Connection</span><strong id="connectionState">Idle</strong></div>
+          <div><span>Transport</span><strong id="transportState">Relay</strong></div>
           <div><span>Relay ping</span><strong id="pingValue">--</strong></div>
           <div><span>Input lag</span><strong id="inputLagValue">--</strong></div>
           <div><span>Mouse</span><strong id="mouseState">Off</strong></div>
@@ -30,12 +31,36 @@
       <section class="content">
         <section class="toolbar">
           <label>
+            Transport
+            <select id="transportMode">
+              <option value="relay">Relay WebSocket</option>
+              <option value="direct-tcp">Direct TCP</option>
+              <option value="direct-udp">Direct UDP input</option>
+            </select>
+          </label>
+          <label data-transport-field="relay">
             Relay URL
             <input id="relayUrl" value="ws://localhost:8787/ws" spellcheck="false">
+          </label>
+          <label data-transport-field="direct">
+            Direct host
+            <input id="directHost" value="127.0.0.1" spellcheck="false">
+          </label>
+          <label data-transport-field="direct">
+            TCP port
+            <input id="directPort" value="8788" inputmode="numeric" spellcheck="false">
+          </label>
+          <label data-transport-field="udp">
+            UDP port
+            <input id="udpPort" value="8789" inputmode="numeric" spellcheck="false">
           </label>
           <label>
             Name
             <input id="displayName" value="Player" spellcheck="false">
+          </label>
+          <label>
+            <span>Transport status</span>
+            <strong id="transportHint" class="hint-box">Relay uses the WebSocket URL.</strong>
           </label>
           <label class="check-row">
             <input id="enableMouse" type="checkbox">

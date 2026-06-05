@@ -12,11 +12,40 @@ function log(message) {
 }
 
 function options() {
+  const transportMode = $("transportMode").value;
   return {
+    transportMode,
     relayUrl: $("relayUrl").value.trim(),
+    directHost: $("directHost").value.trim(),
+    directPort: Number($("directPort").value) || 8788,
+    udpPort: Number($("udpPort").value) || 8789,
     name: $("displayName").value.trim() || "Player",
     mouseEnabled: $("enableMouse").checked
   };
+}
+
+function updateTransportFields() {
+  const transportMode = $("transportMode").value;
+  document.querySelectorAll("[data-transport-field]").forEach((field) => {
+    const group = field.dataset.transportField;
+    field.hidden = (group === "relay" && transportMode !== "relay") ||
+      (group === "direct" && transportMode === "relay") ||
+      (group === "udp" && transportMode !== "direct-udp");
+  });
+  if (transportMode === "relay") {
+    $("transportHint").textContent = "Relay uses the WebSocket URL and works over the internet when the relay is hosted.";
+  } else if (transportMode === "direct-tcp") {
+    $("transportHint").textContent = "Host listens on TCP. Guest connects to the host IP over LAN, VPN, or port-forwarding.";
+  } else {
+    $("transportHint").textContent = "TCP handles approval; keyboard/mouse packets use UDP for lower latency on LAN/VPN.";
+  }
+  $("transportState").textContent = transportLabel(transportMode);
+}
+
+function transportLabel(transportMode) {
+  if (transportMode === "direct-tcp") return "Direct TCP";
+  if (transportMode === "direct-udp") return "Direct UDP";
+  return "Relay";
 }
 
 function setMode(nextMode) {
@@ -39,6 +68,7 @@ function setMirrorSide(nextSide) {
 function updateState(state) {
   if (!state) return;
   $("connectionState").textContent = state.connected ? (state.approved ? "Approved" : "Connected") : "Idle";
+  $("transportState").textContent = transportLabel(state.transportMode || $("transportMode").value);
   $("mouseState").textContent = state.mouseEnabled || state.receiveMouse ? "On" : "Off";
   if (state.targetWindow) $("targetName").textContent = state.targetWindow.title;
 }
@@ -50,6 +80,8 @@ document.querySelectorAll(".mode").forEach((button) => {
 document.querySelectorAll(".segment").forEach((button) => {
   button.addEventListener("click", () => setMirrorSide(button.dataset.side));
 });
+
+$("transportMode").addEventListener("change", updateTransportFields);
 
 $("lockTarget").addEventListener("click", async () => {
   try {
@@ -125,3 +157,4 @@ window.erk.onInput((payload) => {
 });
 
 window.erk.getState().then(updateState);
+updateTransportFields();

@@ -16,7 +16,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -151,7 +152,8 @@ label {
   font-size: 13px;
 }
 
-input {
+input,
+select {
   min-height: 42px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: #0e1218;
@@ -161,8 +163,26 @@ input {
   outline: none;
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: #76c7ed;
+}
+
+.hint-box {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #0e1218;
+  color: #c2ccd7;
+  border-radius: 6px;
+  padding: 0 12px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .check-row {

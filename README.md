@@ -29,7 +29,17 @@ The app asks whether this computer should be **Host**, **Guest**, or **Two-way**
 
 Mouse sharing is off by default. Turn on **Share mouse** before starting a session if you want to send or accept mouse movement, buttons, and wheel input.
 
-The sidebar shows **Relay ping** and **Input lag** while connected. Relay ping is the round trip to the relay server. Input lag is measured from a sent keyboard/mouse packet until the other computer acknowledges receiving and processing it.
+The sidebar shows the selected **Transport**, **Relay ping**, and **Input lag** while connected. Relay ping is the round trip to the selected message path. Input lag is measured from a sent keyboard/mouse packet until the other computer acknowledges receiving and processing it.
+
+## Transport Modes
+
+The GUI can switch between transports so you can compare latency yourself:
+
+- **Relay WebSocket**: the original mode. Both apps connect to a hosted relay URL such as `wss://your-domain.example/ws`. This is easiest across the internet, but input travels `guest -> relay -> host`.
+- **Direct TCP**: the host listens on a TCP port, and the guest connects directly to the host IP. Use this on the same LAN, over Tailscale/ZeroTier/Hamachi, or with router port-forwarding. This removes the relay hop.
+- **Direct UDP input**: the host and guest use TCP for approval/control, then send keyboard/mouse packets and latency probes over UDP. This is usually the lowest-latency option on LAN/VPN, but it needs UDP to be reachable between the two machines.
+
+For direct modes, start the host first. The host shows local IP addresses in the activity log/room field. On the guest, choose the same transport and enter the host IP plus matching TCP/UDP ports.
 
 ## Run Locally
 
@@ -162,7 +172,7 @@ Use the `x64` files for Intel Macs and the `arm64` files for Apple Silicon Macs.
 
 - Windows x64 and macOS x64/arm64 only.
 - Keyboard support is always available; mouse sharing is optional and disabled by default.
-- Uses WebSocket relay for the first implementation. The input layer is intentionally separate so a WebRTC transport can replace it later.
+- Supports relay WebSocket, direct TCP, and direct UDP-input transports. Internet P2P hole punching and WebRTC/QUIC negotiation are still future transport options.
 - `SendInput` cannot control secure desktop, UAC prompts, Ctrl+Alt+Del, or higher-integrity/elevated apps unless the host is also elevated.
 - Release binaries are unsigned/not notarized. Windows SmartScreen and macOS Gatekeeper may warn on first launch.
 - Do not use with competitive games or anti-cheat-protected games unless the game explicitly allows remote input tools.

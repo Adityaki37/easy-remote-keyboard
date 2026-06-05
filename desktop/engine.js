@@ -12,6 +12,7 @@ const {
 const input = require("../host/platform");
 const { KeyboardHook } = require("../guest/keyboard-hook");
 const { MouseHook } = require("../guest/mouse-hook");
+const { createTransport } = require("./transports");
 
 function parseAllowlist(value) {
   if (!value) return new Set(DEFAULT_ALLOWED_CODES);
@@ -26,6 +27,7 @@ class DesktopEngine extends EventEmitter {
     this.mouseHook = null;
     this.role = null;
     this.side = null;
+    this.transportMode = "relay";
     this.targetWindow = null;
     this.paused = false;
     this.approved = false;
@@ -53,6 +55,7 @@ class DesktopEngine extends EventEmitter {
       approved: this.approved,
       paused: this.paused,
       captureOn: this.captureOn,
+      transportMode: this.transportMode,
       mouseEnabled: this.mouseEnabled,
       receiveMouse: this.receiveMouse,
       remoteHeld: this.remoteHeldCodes.size
@@ -76,19 +79,20 @@ class DesktopEngine extends EventEmitter {
     return this.targetWindow;
   }
 
-  startHost({ relayUrl, name, mouseEnabled = false }) {
+  startHost({ relayUrl, name, mouseEnabled = false, transportMode = "relay", directHost, directPort, udpPort }) {
     this.stop({ silent: true });
     this.role = "host";
     this.side = "create";
+    this.transportMode = transportMode;
     this.paused = false;
     this.approved = false;
     this.mouseEnabled = false;
     this.receiveMouse = Boolean(mouseEnabled);
-    this.ws = new WebSocket(relayUrl);
+    this.ws = createTransport({ transportMode, relayUrl, directHost, directPort, udpPort, role: "host", side: "create", name });
 
     this.ws.on("open", () => {
       sendJson(this.ws, { type: MESSAGE_TYPES.HOST_REGISTER, hostName: name || "Host" });
-      this.emitStatus("Connected to relay. Creating host room...");
+      this.emitStatus(`${transportLabel(transportMode)} ready. Creating host room...`);
     });
 
     this.ws.on("message", (raw) => this.handleHostMessage(raw));
@@ -169,10 +173,11 @@ class DesktopEngine extends EventEmitter {
     this.emitStatus("Guest disconnected.");
   }
 
-  startGuest({ relayUrl, roomCode, name, mouseEnabled = false }) {
+  startGuest({ relayUrl, roomCode, name, mouseEnabled = false, transportMode = "relay", directHost, directPort, udpPort }) {
     this.stop({ silent: true });
     this.role = "guest";
     this.side = "join";
+    this.transportMode = transportMode;
     this.approved = false;
     this.paused = false;
     this.mouseEnabled = Boolean(mouseEnabled);
@@ -188,7 +193,7 @@ class DesktopEngine extends EventEmitter {
       suppressLocal: true,
       onMouse: (event) => this.sendGuestMouse(event)
     });
-    this.ws = new WebSocket(relayUrl);
+    this.ws = createTransport({ transportMode, relayUrl, directHost, directPort, udpPort, role: "guest", side: "join", name });
 
     this.ws.on("open", () => {
       sendJson(this.ws, {
@@ -196,7 +201,7 @@ class DesktopEngine extends EventEmitter {
         roomCode: String(roomCode || "").trim().toUpperCase(),
         guestName: name || "Guest"
       });
-      this.emitStatus("Connected to relay. Waiting for host approval...");
+      this.emitStatus(`Connected over ${transportLabel(transportMode)}. Waiting for host approval...`);
     });
 
     this.ws.on("message", (raw) => this.handleGuestMessage(raw));
@@ -240,10 +245,11 @@ class DesktopEngine extends EventEmitter {
     this.handleCommonMessage(msg);
   }
 
-  startMirror({ relayUrl, name, side, roomCode, mouseEnabled = false }) {
+  startMirror({ relayUrl, name, side, roomCode, mouseEnabled = false, transportMode = "relay", directHost, directPort, udpPort }) {
     this.stop({ silent: true });
     this.role = "mirror";
     this.side = side;
+    this.transportMode = transportMode;
     this.approved = false;
     this.paused = false;
     this.mouseEnabled = Boolean(mouseEnabled);
@@ -259,19 +265,19 @@ class DesktopEngine extends EventEmitter {
       suppressLocal: false,
       onMouse: (event) => this.sendMirrorMouse(event)
     });
-    this.ws = new WebSocket(relayUrl);
+    this.ws = createTransport({ transportMode, relayUrl, directHost, directPort, udpPort, role: "mirror", side, name });
 
     this.ws.on("open", () => {
       if (side === "create") {
         sendJson(this.ws, { type: MESSAGE_TYPES.HOST_REGISTER, hostName: `${name || "Player"} (two-way)` });
-        this.emitStatus("Connected to relay. Creating two-way room...");
+        this.emitStatus(`${transportLabel(transportMode)} ready. Creating two-way room...`);
       } else {
         sendJson(this.ws, {
           type: MESSAGE_TYPES.GUEST_JOIN,
           roomCode: String(roomCode || "").trim().toUpperCase(),
           guestName: `${name || "Player"} (two-way)`
         });
-        this.emitStatus("Connected to relay. Waiting for approval...");
+        this.emitStatus(`Connected over ${transportLabel(transportMode)}. Waiting for approval...`);
       }
     });
 
@@ -573,7 +579,7 @@ class DesktopEngine extends EventEmitter {
       return;
     }
     if (msg.type === MESSAGE_TYPES.SERVER_ERROR) {
-      this.emitStatus(`Relay error: ${msg.message}`, { level: "error" });
+      this.emitStatus(`Transport error: ${msg.message}`, { level: "error" });
     }
   }
 
@@ -584,10 +590,10 @@ class DesktopEngine extends EventEmitter {
       this.setCapture(false, "relay disconnected");
       this.releaseRemote("relay disconnected");
       this.stopRelayPing();
-      this.emitStatus("Relay disconnected.");
+      this.emitStatus(`${transportLabel(this.transportMode)} disconnected.`);
     });
     this.ws.on("error", (err) => {
-      this.emitStatus(`Relay connection error: ${err.message}`, { level: "error" });
+      this.emitStatus(`${transportLabel(this.transportMode)} connection error: ${err.message}`, { level: "error" });
     });
   }
 
@@ -625,6 +631,7 @@ class DesktopEngine extends EventEmitter {
     this.pendingInputAcks.clear();
     this.role = null;
     this.side = null;
+    this.transportMode = "relay";
     this.paused = false;
     this.approved = false;
     this.captureOn = false;
@@ -648,4 +655,10 @@ function mouseLabel(event) {
   if (event.kind === "button") return `Mouse ${event.button}`;
   if (event.kind === "wheel") return `Mouse wheel ${event.axis || "vertical"}`;
   return "Mouse move";
+}
+
+function transportLabel(mode) {
+  if (mode === "direct-tcp") return "Direct TCP";
+  if (mode === "direct-udp") return "Direct UDP";
+  return "Relay";
 }

@@ -1,6 +1,6 @@
 {
   "name": "easy-remote-keyboard",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Low-bandwidth remote keyboard sharing for focused Windows and macOS apps.",
   "main": "desktop/main.js",
   "type": "commonjs",
@@ -14,6 +14,7 @@
     "dev": "node server/index.js",
     "smoke": "node scripts/smoke.js",
     "smoke:gui": "node scripts/smoke-gui.js",
+    "smoke:transports": "node scripts/smoke-transports.js",
     "smoke:electron": "node scripts/smoke-electron-launch.js",
     "build:app": "node scripts/build-app.js",
     "build:desktop": "node scripts/build-desktop.js",
