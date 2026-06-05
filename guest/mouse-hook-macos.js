@@ -38,7 +38,7 @@ const CGEventTapCallBack = koffi.proto("uintptr CGMouseEventTapCallBack(uintptr 
 const CGEventTapCreate = appServices.func("uintptr CGEventTapCreate(uint32 tap, uint32 place, uint32 options, uint64 eventsOfInterest, CGMouseEventTapCallBack *callback, uintptr userInfo)");
 const CGEventTapEnable = appServices.func("void CGEventTapEnable(uintptr tap, bool enable)");
 const CGEventGetIntegerValueField = appServices.func("int64 CGEventGetIntegerValueField(uintptr event, uint32 field)");
-const CGEventGetLocation = appServices.func("void CGEventGetLocation(uintptr event, _Out_ CGPoint_MOUSE *point)");
+const CGEventGetLocation = appServices.func("CGPoint_MOUSE CGEventGetLocation(uintptr event)");
 const CFMachPortCreateRunLoopSource = coreFoundation.func("uintptr CFMachPortCreateRunLoopSource(uintptr allocator, uintptr port, intptr order)");
 const CFRunLoopGetCurrent = coreFoundation.func("uintptr CFRunLoopGetCurrent()");
 const CFRunLoopAddSource = coreFoundation.func("void CFRunLoopAddSource(uintptr rl, uintptr source, uintptr mode)");
@@ -145,8 +145,7 @@ class MouseHook {
 
   eventFromType(type, event) {
     if (type === kCGEventMouseMoved || type === kCGEventLeftMouseDragged || type === kCGEventRightMouseDragged || type === kCGEventOtherMouseDragged) {
-      const point = {};
-      CGEventGetLocation(event, point);
+      const point = CGEventGetLocation(event);
       if (!this.lastPoint) {
         this.lastPoint = point;
         return null;
