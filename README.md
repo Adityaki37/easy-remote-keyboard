@@ -29,6 +29,8 @@ The app asks whether this computer should be **Host**, **Guest**, or **Two-way**
 
 Mouse sharing is off by default. Turn on **Share mouse** before starting a session if you want to send or accept mouse movement, buttons, and wheel input.
 
+The sidebar shows **Relay ping** and **Input lag** while connected. Relay ping is the round trip to the relay server. Input lag is measured from a sent keyboard/mouse packet until the other computer acknowledges receiving and processing it.
+
 ## Run Locally
 
 ```powershell

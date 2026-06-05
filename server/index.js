@@ -130,7 +130,7 @@ function handleHost(ws, msg) {
     return;
   }
 
-  if (msg.type === MESSAGE_TYPES.HOST_INPUT || msg.type === MESSAGE_TYPES.HOST_MOUSE) {
+  if (msg.type === MESSAGE_TYPES.HOST_INPUT || msg.type === MESSAGE_TYPES.HOST_MOUSE || msg.type === MESSAGE_TYPES.HOST_INPUT_ACK) {
     if (!room.approved) return;
     sendJson(room.guestWs, msg);
   }
@@ -169,7 +169,7 @@ function handleGuest(ws, msg) {
   const room = rooms.get(ws.roomCode);
   if (!room || room.guestWs !== ws) return;
 
-  if (msg.type === MESSAGE_TYPES.GUEST_INPUT || msg.type === MESSAGE_TYPES.GUEST_MOUSE) {
+  if (msg.type === MESSAGE_TYPES.GUEST_INPUT || msg.type === MESSAGE_TYPES.GUEST_MOUSE || msg.type === MESSAGE_TYPES.GUEST_INPUT_ACK) {
     if (!room.approved) return;
     sendJson(room.hostWs, msg);
     return;
@@ -189,6 +189,14 @@ wss.on("connection", (ws) => {
     const msg = safeJsonParse(raw);
     if (!msg || typeof msg.type !== "string") {
       sendJson(ws, { type: MESSAGE_TYPES.SERVER_ERROR, message: "Invalid message." });
+      return;
+    }
+    if (msg.type === MESSAGE_TYPES.GUEST_PING) {
+      sendJson(ws, {
+        type: MESSAGE_TYPES.SERVER_PONG,
+        t: msg.t,
+        serverTime: Date.now()
+      });
       return;
     }
     if (msg.type.startsWith("host/")) handleHost(ws, msg);

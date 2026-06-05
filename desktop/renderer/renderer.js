@@ -112,6 +112,11 @@ window.erk.onJoinRequest((payload) => {
 });
 
 window.erk.onPing((payload) => {
+  if (payload.kind === "input") {
+    const prefix = payload.inputKind === "mouse" ? "mouse" : "key";
+    $("inputLagValue").textContent = `${prefix} ${payload.ms} ms${payload.ok ? "" : " blocked"}`;
+    return;
+  }
   $("pingValue").textContent = `${payload.ms} ms`;
 });
 

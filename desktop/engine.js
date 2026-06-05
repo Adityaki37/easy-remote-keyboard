@@ -35,8 +35,11 @@ class DesktopEngine extends EventEmitter {
     this.remoteHeldCodes = new Set();
     this.remoteMouseButtons = new Set();
     this.remoteActiveCodes = new Set();
+    this.pendingInputAcks = new Map();
     this.allowedCodes = parseAllowlist(process.env.ALLOW_KEYS);
     this.lastRemoteInputAt = 0;
+    this.nextLatencyId = 0;
+    this.pingTimer = null;
     this.watchdog = setInterval(() => this.watchdogTick(), 250);
     this.watchdog.unref();
   }
@@ -121,12 +124,14 @@ class DesktopEngine extends EventEmitter {
     }
 
     if (msg.type === MESSAGE_TYPES.GUEST_INPUT) {
-      this.injectRemote(msg.event);
+      const ok = this.injectRemote(msg.event);
+      this.sendInputAck(MESSAGE_TYPES.HOST_INPUT_ACK, msg, ok);
       return;
     }
 
     if (msg.type === MESSAGE_TYPES.GUEST_MOUSE) {
-      this.injectRemoteMouse(msg.event);
+      const ok = this.injectRemoteMouse(msg.event);
+      this.sendInputAck(MESSAGE_TYPES.HOST_INPUT_ACK, msg, ok);
       return;
     }
 
@@ -175,13 +180,13 @@ class DesktopEngine extends EventEmitter {
     this.hook = new KeyboardHook({
       allowedCodes: this.allowedCodes,
       suppressLocal: true,
-      onInput: (event) => sendJson(this.ws, { type: MESSAGE_TYPES.GUEST_INPUT, event }),
+      onInput: (event) => this.sendGuestInput(event),
       onToggle: () => this.toggleCapture()
     });
     this.hook.start();
     this.setupMouseHook({
       suppressLocal: true,
-      onMouse: (event) => sendJson(this.ws, { type: MESSAGE_TYPES.GUEST_MOUSE, event })
+      onMouse: (event) => this.sendGuestMouse(event)
     });
     this.ws = new WebSocket(relayUrl);
 
@@ -224,6 +229,11 @@ class DesktopEngine extends EventEmitter {
     if (msg.type === MESSAGE_TYPES.HOST_RESUME) {
       this.paused = false;
       this.setCapture(true, "host resumed");
+      return;
+    }
+
+    if (msg.type === MESSAGE_TYPES.HOST_INPUT_ACK) {
+      this.handleCommonMessage(msg);
       return;
     }
 
@@ -301,24 +311,42 @@ class DesktopEngine extends EventEmitter {
 
     const remoteType = this.side === "create" ? MESSAGE_TYPES.GUEST_INPUT : MESSAGE_TYPES.HOST_INPUT;
     if (msg.type === remoteType) {
-      this.injectRemote(msg.event);
+      const ok = this.injectRemote(msg.event);
+      const ackType = this.side === "create" ? MESSAGE_TYPES.HOST_INPUT_ACK : MESSAGE_TYPES.GUEST_INPUT_ACK;
+      this.sendInputAck(ackType, msg, ok);
       return;
     }
 
     const remoteMouseType = this.side === "create" ? MESSAGE_TYPES.GUEST_MOUSE : MESSAGE_TYPES.HOST_MOUSE;
     if (msg.type === remoteMouseType) {
-      this.injectRemoteMouse(msg.event);
+      const ok = this.injectRemoteMouse(msg.event);
+      const ackType = this.side === "create" ? MESSAGE_TYPES.HOST_INPUT_ACK : MESSAGE_TYPES.GUEST_INPUT_ACK;
+      this.sendInputAck(ackType, msg, ok);
       return;
     }
 
     this.handleCommonMessage(msg);
   }
 
+  sendGuestInput(event) {
+    sendJson(this.ws, {
+      type: MESSAGE_TYPES.GUEST_INPUT,
+      event: this.withLatencyProbe(event, "key")
+    });
+  }
+
+  sendGuestMouse(event) {
+    sendJson(this.ws, {
+      type: MESSAGE_TYPES.GUEST_MOUSE,
+      event: this.withLatencyProbe(event, "mouse")
+    });
+  }
+
   sendMirrorInput(event) {
     const type = this.side === "create" ? MESSAGE_TYPES.HOST_INPUT : MESSAGE_TYPES.GUEST_INPUT;
     sendJson(this.ws, {
       type,
-      event: { ...event, origin: this.side, mirrored: true }
+      event: this.withLatencyProbe({ ...event, origin: this.side, mirrored: true }, "key")
     });
   }
 
@@ -326,8 +354,51 @@ class DesktopEngine extends EventEmitter {
     const type = this.side === "create" ? MESSAGE_TYPES.HOST_MOUSE : MESSAGE_TYPES.GUEST_MOUSE;
     sendJson(this.ws, {
       type,
-      event: { ...event, origin: this.side, mirrored: true }
+      event: this.withLatencyProbe({ ...event, origin: this.side, mirrored: true }, "mouse")
     });
+  }
+
+  withLatencyProbe(event, inputKind) {
+    const latencyId = `${Date.now()}-${++this.nextLatencyId}`;
+    const sentAt = Date.now();
+    this.pendingInputAcks.set(latencyId, { sentAt, inputKind });
+    if (this.pendingInputAcks.size > 128) {
+      const oldest = this.pendingInputAcks.keys().next().value;
+      this.pendingInputAcks.delete(oldest);
+    }
+    return {
+      ...event,
+      latencyId,
+      latencySentAt: sentAt,
+      inputKind
+    };
+  }
+
+  sendInputAck(type, msg, ok) {
+    const event = msg?.event || {};
+    if (!event.latencyId) return;
+    sendJson(this.ws, {
+      type,
+      latencyId: event.latencyId,
+      latencySentAt: event.latencySentAt,
+      inputKind: event.inputKind || (event.kind ? "mouse" : "key"),
+      ok: Boolean(ok),
+      receivedAt: Date.now()
+    });
+  }
+
+  startRelayPing() {
+    this.stopRelayPing();
+    this.pingTimer = setInterval(() => {
+      sendJson(this.ws, { type: MESSAGE_TYPES.GUEST_PING, t: Date.now() });
+    }, 1000);
+    this.pingTimer.unref();
+    sendJson(this.ws, { type: MESSAGE_TYPES.GUEST_PING, t: Date.now() });
+  }
+
+  stopRelayPing() {
+    if (this.pingTimer) clearInterval(this.pingTimer);
+    this.pingTimer = null;
   }
 
   setupMouseHook({ suppressLocal, onMouse }) {
@@ -382,14 +453,14 @@ class DesktopEngine extends EventEmitter {
       for (const code of before) this.remoteActiveCodes.add(code);
       if (event.down) this.emitStatus(failure, { level: "warn" });
       this.releaseRemote("blocked or unsafe remote input");
-      return;
+      return false;
     }
 
     if (event.down) {
-      if (this.remoteHeldCodes.has(event.code)) return;
+      if (this.remoteHeldCodes.has(event.code)) return true;
       this.remoteHeldCodes.add(event.code);
     } else {
-      if (!this.remoteHeldCodes.has(event.code)) return;
+      if (!this.remoteHeldCodes.has(event.code)) return true;
       this.remoteHeldCodes.delete(event.code);
     }
 
@@ -398,9 +469,11 @@ class DesktopEngine extends EventEmitter {
       input.sendKey(event.code, event.down);
       this.lastRemoteInputAt = Date.now();
       this.emit("input", { code: event.code, down: event.down });
+      return true;
     } catch (err) {
       this.emitStatus(err.message, { level: "error" });
       this.releaseRemote("input injection error");
+      return false;
     }
   }
 
@@ -431,7 +504,7 @@ class DesktopEngine extends EventEmitter {
     if (failure) {
       if (event?.kind !== "move") this.emitStatus(failure, { level: "warn" });
       this.releaseRemoteMouse("blocked or unsafe remote mouse");
-      return;
+      return false;
     }
 
     try {
@@ -443,9 +516,11 @@ class DesktopEngine extends EventEmitter {
       }
       this.lastRemoteInputAt = Date.now();
       this.emit("input", { code: mouseLabel(event), down: event.down ?? true });
+      return true;
     } catch (err) {
       this.emitStatus(err.message, { level: "error" });
       this.releaseRemoteMouse("mouse injection error");
+      return false;
     }
   }
 
@@ -480,7 +555,21 @@ class DesktopEngine extends EventEmitter {
 
   handleCommonMessage(msg) {
     if (msg.type === MESSAGE_TYPES.SERVER_PONG) {
-      this.emit("ping", { ms: Date.now() - msg.t });
+      this.emit("ping", { kind: "relay", ms: Date.now() - msg.t });
+      return;
+    }
+    if (msg.type === MESSAGE_TYPES.HOST_INPUT_ACK || msg.type === MESSAGE_TYPES.GUEST_INPUT_ACK) {
+      const pending = this.pendingInputAcks.get(msg.latencyId);
+      const sentAt = pending?.sentAt || msg.latencySentAt;
+      if (msg.latencyId) this.pendingInputAcks.delete(msg.latencyId);
+      if (sentAt) {
+        this.emit("ping", {
+          kind: "input",
+          inputKind: msg.inputKind || pending?.inputKind || "input",
+          ok: msg.ok !== false,
+          ms: Date.now() - sentAt
+        });
+      }
       return;
     }
     if (msg.type === MESSAGE_TYPES.SERVER_ERROR) {
@@ -489,10 +578,12 @@ class DesktopEngine extends EventEmitter {
   }
 
   attachCommonSocketHandlers() {
+    this.ws.on("open", () => this.startRelayPing());
     this.ws.on("close", () => {
       this.approved = false;
       this.setCapture(false, "relay disconnected");
       this.releaseRemote("relay disconnected");
+      this.stopRelayPing();
       this.emitStatus("Relay disconnected.");
     });
     this.ws.on("error", (err) => {
@@ -501,6 +592,10 @@ class DesktopEngine extends EventEmitter {
   }
 
   watchdogTick() {
+    const ackCutoff = Date.now() - 5000;
+    for (const [id, pending] of this.pendingInputAcks) {
+      if (pending.sentAt < ackCutoff) this.pendingInputAcks.delete(id);
+    }
     if (this.remoteHeldCodes.size && Date.now() - this.lastRemoteInputAt > 3000) {
       this.releaseRemote("stuck-key watchdog");
     }
@@ -526,6 +621,8 @@ class DesktopEngine extends EventEmitter {
       } catch {}
       this.ws = null;
     }
+    this.stopRelayPing();
+    this.pendingInputAcks.clear();
     this.role = null;
     this.side = null;
     this.paused = false;
