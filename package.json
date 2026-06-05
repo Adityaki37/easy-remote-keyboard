@@ -2,7 +2,7 @@
   "name": "easy-remote-keyboard",
   "version": "0.1.0",
   "description": "Low-bandwidth remote keyboard sharing for focused Windows and macOS apps.",
-  "main": "server/index.js",
+  "main": "desktop/main.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server/index.js",
@@ -10,9 +10,14 @@
     "guest": "node guest/main.js",
     "mirror": "node mirror/main.js",
     "app": "node app/main.js",
+    "gui": "electron desktop/main.js",
     "dev": "node server/index.js",
     "smoke": "node scripts/smoke.js",
+    "smoke:gui": "node scripts/smoke-gui.js",
+    "smoke:electron": "node scripts/smoke-electron-launch.js",
     "build:app": "node scripts/build-app.js",
+    "build:desktop": "node scripts/build-desktop.js",
+    "build:desktop:mac": "node scripts/build-desktop-mac.js",
     "build:host": "node scripts/build-host.js",
     "build:guest": "node scripts/build-guest.js",
     "build:mac": "node scripts/build-mac.js",
@@ -37,7 +42,11 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@yao-pkg/pkg": "^6.7.0"
+    "@electron/packager": "^20.0.1",
+    "@yao-pkg/pkg": "^6.7.0",
+    "electron": "^42.3.3",
+    "electron-builder": "^26.8.1",
+    "tar": "^7.5.16"
   },
   "bin": {
     "easy-remote-keyboard": "app/main.js",
@@ -58,6 +67,51 @@
       "node_modules/koffi/**/*",
       "node_modules/@koromix/koffi-*/**/*"
     ]
+  },
+  "build": {
+    "appId": "com.adityaki37.easyremotekeyboard",
+    "productName": "Easy Remote Keyboard",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "host/**/*",
+      "guest/**/*",
+      "mirror/**/*",
+      "shared/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/**/*.node"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "identity": null,
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "npmRebuild": false
   },
   "optionalDependencies": {
     "@koromix/koffi-darwin-arm64": "^3.0.2",

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Easy Remote Keyboard</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>Easy Remote Keyboard</h1>
+          <span id="modePill" class="pill">Idle</span>
+        </div>
+        <nav class="mode-list" aria-label="Modes">
+          <button class="mode active" data-mode="host" type="button">Host</button>
+          <button class="mode" data-mode="guest" type="button">Guest</button>
+          <button class="mode" data-mode="mirror" type="button">Two-way</button>
+        </nav>
+        <div class="summary">
+          <div><span>Target</span><strong id="targetName">Not locked</strong></div>
+          <div><span>Connection</span><strong id="connectionState">Idle</strong></div>
+          <div><span>Ping</span><strong id="pingValue">--</strong></div>
+        </div>
+      </aside>
+
+      <section class="content">
+        <section class="toolbar">
+          <label>
+            Relay URL
+            <input id="relayUrl" value="ws://localhost:8787/ws" spellcheck="false">
+          </label>
+          <label>
+            Name
+            <input id="displayName" value="Player" spellcheck="false">
+          </label>
+          <button id="lockTarget" type="button">Lock focused app</button>
+        </section>
+
+        <section id="hostPanel" class="panel active">
+          <div class="panel-header">
+            <h2>Host</h2>
+            <p>Approve a friend and let their keyboard control your locked focused app.</p>
+          </div>
+          <div class="actions">
+            <button id="startHost" type="button">Start host room</button>
+            <button id="pauseHost" type="button">Pause</button>
+            <button id="resumeHost" type="button">Resume</button>
+            <button id="disconnectGuest" type="button">Disconnect guest</button>
+          </div>
+          <div class="room">
+            <span>Room code</span>
+            <strong id="hostRoomCode">------</strong>
+          </div>
+        </section>
+
+        <section id="guestPanel" class="panel">
+          <div class="panel-header">
+            <h2>Guest</h2>
+            <p>Send this computer's keyboard to a host after they approve you.</p>
+          </div>
+          <div class="join-row">
+            <label>
+              Room code
+              <input id="guestRoomCode" maxlength="6" spellcheck="false" placeholder="ABC123">
+            </label>
+            <button id="joinGuest" type="button">Join as guest</button>
+          </div>
+          <div class="actions">
+            <button id="toggleGuestCapture" type="button">Toggle capture</button>
+          </div>
+        </section>
+
+        <section id="mirrorPanel" class="panel">
+          <div class="panel-header">
+            <h2>Two-way</h2>
+            <p>Both keyboards keep working locally and are mirrored to the other locked app.</p>
+          </div>
+          <div class="segmented">
+            <button class="segment active" data-side="create" type="button">Create room</button>
+            <button class="segment" data-side="join" type="button">Join room</button>
+          </div>
+          <div class="join-row">
+            <label>
+              Room code
+              <input id="mirrorRoomCode" maxlength="6" spellcheck="false" placeholder="Only when joining">
+            </label>
+            <button id="startMirror" type="button">Start two-way</button>
+          </div>
+          <div class="room">
+            <span>Created room</span>
+            <strong id="mirrorCreatedCode">------</strong>
+          </div>
+          <div class="actions">
+            <button id="toggleMirrorCapture" type="button">Toggle two-way send</button>
+          </div>
+        </section>
+
+        <section class="approval" id="approvalBox" hidden>
+          <strong id="approvalText">Someone wants to connect.</strong>
+          <div>
+            <button id="approveButton" type="button">Approve</button>
+            <button id="rejectButton" type="button">Reject</button>
+          </div>
+        </section>
+
+        <section class="log-wrap">
+          <div class="log-title">
+            <h2>Activity</h2>
+            <button id="stopAll" type="button">Stop</button>
+          </div>
+          <div id="log" class="log"></div>
+        </section>
+      </section>
+    </main>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

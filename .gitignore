@@ -1,6 +1,9 @@
 node_modules/
 .cache/
 dist/
+release/
+release-mac/
+*.blockmap
 npm-debug.log*
 *.local
 .DS_Store

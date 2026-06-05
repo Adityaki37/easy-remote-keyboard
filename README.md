@@ -20,9 +20,9 @@ https://github.com/Adityaki37/easy-remote-keyboard/releases/latest
 
 Use:
 
-- `easy-remote-keyboard.exe` for Windows.
-- `easy-remote-keyboard-macos-arm64.tar.gz` for Apple Silicon Macs.
-- `easy-remote-keyboard-macos-x64.tar.gz` for Intel Macs.
+- `Easy Remote Keyboard 0.1.0.exe` for Windows GUI.
+- `Easy Remote Keyboard-0.1.0-arm64-mac.zip` for Apple Silicon Mac GUI.
+- `Easy Remote Keyboard-0.1.0-x64-mac.zip` for Intel Mac GUI.
 
 The app asks whether this computer should be **Host**, **Guest**, or **Two-way** when it starts.
 
@@ -119,14 +119,20 @@ npm run host
 ## Build The Apps
 
 ```powershell
-npm run build
+npm run build:desktop -- win
 ```
 
-The outputs are:
+The Windows GUI output is:
 
-- `dist/easy-remote-keyboard.exe`
-- `dist/easy-remote-keyboard-macos-x64`
-- `dist/easy-remote-keyboard-macos-arm64`
+- `release/Easy Remote Keyboard 0.1.0.exe`
+
+macOS GUI builds must be produced on macOS:
+
+```bash
+npm run build:desktop -- mac
+```
+
+The macOS GUI outputs are zip files in `release/`.
 
 Legacy split-role debug builds are also available:
 
