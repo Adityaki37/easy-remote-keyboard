@@ -29,7 +29,7 @@ The app asks whether this computer should be **Host**, **Guest**, or **Two-way**
 
 Mouse sharing is off by default. Turn on **Share mouse** before starting a session if you want to send or accept mouse movement, buttons, and wheel input.
 
-The sidebar shows the selected **Transport**, **Relay ping**, and **Input lag** while connected. Relay ping is the round trip to the selected message path. Input lag is measured from a sent keyboard/mouse packet until the other computer acknowledges receiving and processing it.
+The sidebar shows the selected **Transport**, **Path ping**, and **Input lag** while connected. Path ping is the round trip to the selected message path. Input lag is measured from a sent keyboard/mouse packet until the other computer acknowledges receiving and processing it.
 
 ## Transport Modes
 

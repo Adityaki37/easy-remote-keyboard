@@ -1,6 +1,6 @@
 {
   "name": "easy-remote-keyboard",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Low-bandwidth remote keyboard sharing for focused Windows and macOS apps.",
   "main": "desktop/main.js",
   "type": "commonjs",

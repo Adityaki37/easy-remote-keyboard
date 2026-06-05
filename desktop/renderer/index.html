@@ -22,7 +22,7 @@
           <div><span>Target</span><strong id="targetName">Not locked</strong></div>
           <div><span>Connection</span><strong id="connectionState">Idle</strong></div>
           <div><span>Transport</span><strong id="transportState">Relay</strong></div>
-          <div><span>Relay ping</span><strong id="pingValue">--</strong></div>
+          <div><span>Path ping</span><strong id="pingValue">--</strong></div>
           <div><span>Input lag</span><strong id="inputLagValue">--</strong></div>
           <div><span>Mouse</span><strong id="mouseState">Off</strong></div>
         </div>
@@ -42,7 +42,7 @@
             Relay URL
             <input id="relayUrl" value="ws://localhost:8787/ws" spellcheck="false">
           </label>
-          <label data-transport-field="direct">
+          <label data-transport-field="direct-join">
             Direct host
             <input id="directHost" value="127.0.0.1" spellcheck="false">
           </label>
@@ -80,7 +80,7 @@
             <button id="resumeHost" type="button">Resume</button>
             <button id="disconnectGuest" type="button">Disconnect guest</button>
           </div>
-          <div class="room">
+          <div id="hostRoomBlock" class="room">
             <span>Room code</span>
             <strong id="hostRoomCode">------</strong>
           </div>
@@ -93,7 +93,7 @@
             <p>Send this computer's keyboard to a host after they approve you.</p>
           </div>
           <div class="join-row">
-            <label>
+            <label id="guestRoomField">
               Room code
               <input id="guestRoomCode" maxlength="6" spellcheck="false" placeholder="ABC123">
             </label>
@@ -114,13 +114,13 @@
             <button class="segment" data-side="join" type="button">Join room</button>
           </div>
           <div class="join-row">
-            <label>
+            <label id="mirrorRoomField">
               Room code
               <input id="mirrorRoomCode" maxlength="6" spellcheck="false" placeholder="Only when joining">
             </label>
             <button id="startMirror" type="button">Start two-way</button>
           </div>
-          <div class="room">
+          <div id="mirrorCreatedBlock" class="room">
             <span>Created room</span>
             <strong id="mirrorCreatedCode">------</strong>
           </div>

@@ -26,20 +26,24 @@ function options() {
 
 function updateTransportFields() {
   const transportMode = $("transportMode").value;
+  const isRelay = transportMode === "relay";
+  const isJoinSide = mode === "guest" || (mode === "mirror" && mirrorSide === "join");
   document.querySelectorAll("[data-transport-field]").forEach((field) => {
     const group = field.dataset.transportField;
-    field.hidden = (group === "relay" && transportMode !== "relay") ||
-      (group === "direct" && transportMode === "relay") ||
+    field.hidden = (group === "relay" && !isRelay) ||
+      (group === "direct" && isRelay) ||
+      (group === "direct-join" && (isRelay || !isJoinSide)) ||
       (group === "udp" && transportMode !== "direct-udp");
   });
-  if (transportMode === "relay") {
+  if (isRelay) {
     $("transportHint").textContent = "Relay uses the WebSocket URL and works over the internet when the relay is hosted.";
   } else if (transportMode === "direct-tcp") {
-    $("transportHint").textContent = "Host listens on TCP. Guest connects to the host IP over LAN, VPN, or port-forwarding.";
+    $("transportHint").textContent = isJoinSide ? "Enter the host IP shown on the creator side." : "This computer listens on TCP. Give the shown IP:port to the joiner.";
   } else {
-    $("transportHint").textContent = "TCP handles approval; keyboard/mouse packets use UDP for lower latency on LAN/VPN.";
+    $("transportHint").textContent = isJoinSide ? "Enter the host IP shown on the creator side; TCP controls setup, UDP carries input." : "This computer listens for TCP setup and UDP input. Give the shown IP:port to the joiner.";
   }
   $("transportState").textContent = transportLabel(transportMode);
+  updateModeFields();
 }
 
 function transportLabel(transportMode) {
@@ -78,6 +82,26 @@ function clearConnectionInfo() {
   }
 }
 
+function updateModeFields() {
+  const transportMode = $("transportMode").value;
+  const isRelay = transportMode === "relay";
+  const isMirrorCreate = mode === "mirror" && mirrorSide === "create";
+  const isMirrorJoin = mode === "mirror" && mirrorSide === "join";
+
+  $("lockTarget").hidden = mode === "guest";
+  $("hostRoomBlock").hidden = !isRelay;
+  $("guestRoomField").hidden = !isRelay;
+  $("mirrorRoomField").hidden = !(isRelay && isMirrorJoin);
+  $("mirrorCreatedBlock").hidden = !(isRelay && isMirrorCreate);
+  $("toggleMirrorCapture").hidden = !isMirrorCreate && !isMirrorJoin;
+
+  if (mode === "guest") {
+    $("targetName").textContent = "Not needed";
+  } else if (!$("targetName").textContent || $("targetName").textContent === "Not needed") {
+    $("targetName").textContent = "Not locked";
+  }
+}
+
 function setMode(nextMode) {
   mode = nextMode;
   document.querySelectorAll(".mode").forEach((button) => {
@@ -86,6 +110,7 @@ function setMode(nextMode) {
   document.querySelectorAll(".panel").forEach((panel) => panel.classList.remove("active"));
   $(`${mode}Panel`).classList.add("active");
   $("modePill").textContent = mode === "mirror" ? "Two-way" : mode[0].toUpperCase() + mode.slice(1);
+  updateTransportFields();
 }
 
 function setMirrorSide(nextSide) {
@@ -93,6 +118,7 @@ function setMirrorSide(nextSide) {
   document.querySelectorAll(".segment").forEach((button) => {
     button.classList.toggle("active", button.dataset.side === mirrorSide);
   });
+  updateTransportFields();
 }
 
 function updateState(state) {
@@ -101,6 +127,7 @@ function updateState(state) {
   $("transportState").textContent = transportLabel(state.transportMode || $("transportMode").value);
   $("mouseState").textContent = state.mouseEnabled || state.receiveMouse ? "On" : "Off";
   if (state.targetWindow) $("targetName").textContent = state.targetWindow.title;
+  else if (mode === "guest") $("targetName").textContent = "Not needed";
 }
 
 document.querySelectorAll(".mode").forEach((button) => {
@@ -165,33 +192,36 @@ $("toggleGuestCapture").addEventListener("click", () => window.erk.toggleCapture
 $("toggleMirrorCapture").addEventListener("click", () => window.erk.toggleCapture());
 $("stopAll").addEventListener("click", () => window.erk.stop());
 
-window.erk.onStatus((payload) => {
-  log(payload.message);
-  updateState(payload.state);
-  if (payload.roomCode) {
-    $("hostRoomCode").textContent = payload.roomCode;
-    $("mirrorCreatedCode").textContent = payload.roomCode;
-  }
-  if (payload.shareUrl) showConnectionInfo(payload.shareUrl);
-});
-
-window.erk.onJoinRequest((payload) => {
-  $("approvalText").textContent = `${payload.guestName} wants to connect.`;
-  $("approvalBox").hidden = false;
-});
-
-window.erk.onPing((payload) => {
-  if (payload.kind === "input") {
-    const prefix = payload.inputKind === "mouse" ? "mouse" : "key";
-    $("inputLagValue").textContent = `${prefix} ${payload.ms} ms${payload.ok ? "" : " blocked"}`;
-    return;
-  }
-  $("pingValue").textContent = `${payload.ms} ms`;
-});
-
-window.erk.onInput((payload) => {
-  log(`${payload.down ? "Down" : "Up"} ${payload.code}`);
-});
-
-window.erk.getState().then(updateState);
 updateTransportFields();
+
+if (window.erk) {
+  window.erk.onStatus((payload) => {
+    log(payload.message);
+    updateState(payload.state);
+    if (payload.roomCode) {
+      $("hostRoomCode").textContent = payload.roomCode;
+      $("mirrorCreatedCode").textContent = payload.roomCode;
+    }
+    if (payload.shareUrl && payload.state?.transportMode !== "relay") showConnectionInfo(payload.shareUrl);
+  });
+
+  window.erk.onJoinRequest((payload) => {
+    $("approvalText").textContent = `${payload.guestName} wants to connect.`;
+    $("approvalBox").hidden = false;
+  });
+
+  window.erk.onPing((payload) => {
+    if (payload.kind === "input") {
+      const prefix = payload.inputKind === "mouse" ? "mouse" : "key";
+      $("inputLagValue").textContent = `${prefix} ${payload.ms} ms${payload.ok ? "" : " blocked"}`;
+      return;
+    }
+    $("pingValue").textContent = `${payload.ms} ms`;
+  });
+
+  window.erk.onInput((payload) => {
+    log(`${payload.down ? "Down" : "Up"} ${payload.code}`);
+  });
+
+  window.erk.getState().then(updateState);
+}
