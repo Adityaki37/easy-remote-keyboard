@@ -22,8 +22,8 @@ https://github.com/Adityaki37/easy-remote-keyboard/releases/latest
 Use:
 
 - `EasyRemoteKeyboard-Windows-GUI.exe` for Windows.
-- `EasyRemoteKeyboard-macOS-AppleSilicon-GUI.zip` for Apple Silicon Macs.
-- `EasyRemoteKeyboard-macOS-Intel-GUI.zip` for Intel Macs.
+- `EasyRemoteKeyboard-macOS-AppleSilicon-GUI.dmg` for Apple Silicon Macs.
+- `EasyRemoteKeyboard-macOS-Intel-GUI.dmg` for Intel Macs.
 
 The app asks whether this computer should be **Host**, **Guest**, or **Two-way** when it starts.
 
@@ -120,7 +120,16 @@ macOS requires privacy permissions for native input tools:
 
 After changing permissions, restart the app.
 
-If macOS says the app is damaged, it is usually Gatekeeper quarantine on the unsigned/not-notarized build. Move `Easy Remote Keyboard.app` to Applications, then run:
+Mac downloads are DMG installers. Open the `.dmg`, drag `Easy Remote Keyboard.app` to Applications, then launch it from Applications.
+
+If macOS says the app is damaged, it is usually Gatekeeper quarantine on the unsigned/not-notarized build. The easiest non-terminal path is:
+
+- Open **System Settings**.
+- Go to **Privacy & Security**.
+- Scroll to the security message for Easy Remote Keyboard.
+- Click **Open Anyway**.
+
+If that option does not appear, the terminal fallback is:
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/Easy Remote Keyboard.app"
@@ -159,7 +168,7 @@ macOS GUI builds must be produced on macOS:
 npm run build:desktop -- mac
 ```
 
-The macOS GUI outputs are zip files in `release/`.
+The macOS GUI outputs are DMG files in `release/`.
 
 Legacy split-role debug builds are also available:
 

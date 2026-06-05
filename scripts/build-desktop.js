@@ -15,9 +15,9 @@ const args = ["electron-builder"];
 if (platform === "win") {
   args.push("--win", "portable", "--x64", "--publish", "never");
 } else if (platform === "mac") {
-  args.push("--mac", "zip", "--x64", "--arm64", "--publish", "never");
+  args.push("--mac", "dmg", "--x64", "--arm64", "--publish", "never");
 } else {
-  args.push("--win", "portable", "--x64", "--mac", "zip", "--x64", "--arm64", "--publish", "never");
+  args.push("--win", "portable", "--x64", "--mac", "dmg", "--x64", "--arm64", "--publish", "never");
 }
 
 const result = spawnSync(process.platform === "win32" ? "npx.cmd" : "npx", args, {

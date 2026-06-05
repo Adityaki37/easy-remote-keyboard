@@ -44,4 +44,4 @@ jobs:
         with:
           name: easy-remote-keyboard-macos-gui
           path: |
-            release/*.zip
+            release/*.dmg

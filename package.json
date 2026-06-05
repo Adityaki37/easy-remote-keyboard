@@ -1,6 +1,6 @@
 {
   "name": "easy-remote-keyboard",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Low-bandwidth remote keyboard sharing for focused Windows and macOS apps.",
   "main": "desktop/main.js",
   "type": "commonjs",
@@ -101,7 +101,7 @@
       "identity": "-",
       "target": [
         {
-          "target": "zip",
+          "target": "dmg",
           "arch": [
             "arm64",
             "x64"
@@ -111,6 +111,20 @@
       "category": "public.app-category.utilities",
       "hardenedRuntime": false,
       "gatekeeperAssess": false
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "npmRebuild": false
   },
